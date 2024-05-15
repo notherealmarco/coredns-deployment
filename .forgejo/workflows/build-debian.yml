@@ -6,9 +6,10 @@ on:
     branches: ['master', 'main']
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
-# env:
-#  REGISTRY: git.marcorealacci.me
-#  USER: marco-private
+env:
+  DISTRIBUTION: bookworm
+  COMPONENT: main
+  # USER: marco-private
 
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
@@ -21,11 +22,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Checkout repository
-        run: apt-get update && apt-get install build-essential
+      - name: Install dependencies
+        run: apt-get update && apt-get install build-essential debhelper
 
       - name: Build Debian package
         run: dpkg-buildpackage -us -uc -b  --target-arch amd64
 
-      # - name: Call webhook
-      #   run: curl -X POST ${{secrets.DEPLOY_WEBHOOK}}
+      - name: Push to registry
+        run: curl --user ${{ github.actor }}:${{secrets.REGISTRY_TOKEN}} --upload-file $(ls *.deb) https://git.marcorealacci.me/api/packages/packages/debian/pool/${{env.DISTRIBUTION}}/${{env.COMPONENT}}/upload
